@@ -4,6 +4,7 @@
 Solve the Capacitated Vehicle Routing Problem with Time Windows (CVRPTW).
 """
 
+import pygraphviz as pgv
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
 def create_data_model() -> dict:
@@ -11,7 +12,7 @@ def create_data_model() -> dict:
     Store the data for the problem.
     """
     # Weights on each edge
-    _weights = [
+    weights = [
         [0, 6, 9, 8, 6, 3, 6, 2, 3, 2, 6, 6, 4, 4, 5, 9, 7],
         [6, 0, 8, 3, 2, 6, 8, 4, 8, 8, 13, 7, 5, 8, 12, 10, 14],
         [9, 8, 0, 11, 10, 6, 3, 9, 5, 8, 4, 15, 13, 13, 9, 18, 9],
@@ -50,15 +51,15 @@ def create_data_model() -> dict:
         (0, 0),
         (75, 95), (75, 95), # 1, 2
         (60, 80), (45, 65), # 3, 4
-        (0, 20), (55, 75), # 5, 6
-        (0, 20), (10, 30), # 7, 8
-        (0, 20), (75, 95), # 9, 10
+        (0, 20), (55, 75),  # 5, 6
+        (0, 20), (10, 30),  # 7, 8
+        (0, 20), (75, 95),  # 9, 10
         (85, 105), (5, 25), # 11, 12
         (15, 35), (10, 30), # 13, 14
         (45, 65), (30, 50), # 15, 16
     ]
 
-    data = {'weights': _weights,
+    data = {'weights': weights,
             'num_locations': len(demands),
             'num_vehicles': len(capacities),
             'depot': 0,
@@ -190,7 +191,61 @@ def print_solution(data, routing, assignment):
 
     print(f'Total time of all routes: {total_time} min')
 
-def main(enable_guided_local_search: bool = False):
+def draw_network_graph(data):
+    """
+    Draw a network graph of the problem.
+    """
+    weights = data['weights']
+    demands = data['demands']
+    time_windows = data['time_windows']
+    n_loc = data['num_locations']
+    graph = pgv.AGraph(directed=False)
+
+    def _node(index):
+        if index == 0:
+            return f'{index}\nDepot'
+        return f'{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}'
+
+    for node1 in range(n_loc):
+        for node2 in range(node1 + 1, n_loc):
+            weight = weights[node1][node2]
+            graph.add_edge(_node(node1), _node(node2), weight=weight, label=weight)
+
+    filename = 'network.png'
+    graph.draw(filename, prog='dot')
+
+    print(f'The network graph has been saved to {filename}.')
+
+def draw_route_graph(data, routing, assignment):
+    """
+    Draw a route graph based on the solution of the problem.
+    """
+    weights = data['weights']
+    demands = data['demands']
+    time_windows = data['time_windows']
+    graph = pgv.AGraph(directed=True)
+
+    def _node(index):
+        if index == 0:
+            return f'{index}\nDepot'
+        return f'{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}'
+
+    for vehicle_id in range(data['num_vehicles']):
+        index = routing.Start(vehicle_id)
+        while not routing.IsEnd(index):
+            node_index = routing.IndexToNode(index)
+            next_index = assignment.Value(routing.NextVar(index))
+            next_node_index = routing.IndexToNode(next_index)
+            weight = weights[node_index][next_node_index]
+            graph.add_edge(_node(node_index), _node(next_node_index), weight=weight, label=weight)
+            index = next_index
+
+    filename = 'route.png'
+    graph.draw(filename, prog='sfdp')
+
+    print(f'The route graph has been saved to {filename}.')
+
+def main(enable_guided_local_search: bool = False, export_graph: bool = False):
     """
     Entry point of the program.
     """
@@ -236,5 +291,10 @@ def main(enable_guided_local_search: bool = False):
     # Print the solution
     print_solution(data, routing, assignment)
 
+    # Draw a network graph
+    if export_graph:
+        draw_network_graph(data)
+        draw_route_graph(data, routing, assignment)
+
 if __name__ == '__main__':
-    main(enable_guided_local_search=False)
+    main(enable_guided_local_search=False, export_graph=True)
