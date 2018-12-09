@@ -1,8 +1,8 @@
-# capacitated-vehicle-routing-problem-with-time-windows
+# Capacitated Vehicle Routing Problem with Time Windows (CVRPTW) solver
 
 Capacitated Vehicle Routing Problem with Time Windows (CVRPTW) solver written in Python.
 
-Implementation is based on ["Vehicle Routing Problem with Time Windows" section in Google OR-Tools documentanion](https://developers.google.com/optimization/routing/cvrptw).
+Implementation is based on ["Vehicle Routing Problem with Time Windows" section in Google OR-Tools documentation](https://developers.google.com/optimization/routing/cvrptw).
 
 
 ## Overview
