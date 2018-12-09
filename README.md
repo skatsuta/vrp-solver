@@ -1,6 +1,6 @@
 # capacitated-vehicle-routing-problem-with-time-windows
 
-Capacitated Vehicle Routing Problem with Time Windows (CVRPTW) implemented in Python.
+Capacitated Vehicle Routing Problem with Time Windows (CVRPTW) solver written in Python.
 
 Implementation is based on ["Vehicle Routing Problem with Time Windows" section in Google OR-Tools documentanion](https://developers.google.com/optimization/routing/cvrptw).
 
@@ -18,7 +18,7 @@ the program provides the solution as follows:
 ![route](route.png)
 
 
-## Requirements
+## Prerequisites
 
 Python 3.6 or later is required.
 
@@ -32,19 +32,19 @@ $ brew install graphviz --with-gts --with-librsvg --with-pango
 $ pip install ortools pygraphviz
 ```
 
-Alternatively, if you have `pipenv` installed, run the following instead of the second line above:
+Alternatively, if you have `pipenv` installed, run the following command instead of the second line above:
 
 ```shell
 $ pipenv install
 ```
 
-Then, let's solve the problem! Simply run:
+Then, let's solve the sample problem!
 
 ```shell
-$ ./main.py
+$ ./cvrptw.py data.sample.json
 ```
 
-which will output the solution as follows:
+It should output the solution as follows:
 
 ```
 Route for vehicle 0:
@@ -84,4 +84,12 @@ Time of the route: 95 min
 Total time of all routes: 277 min
 ```
 
-In addition, `network.png` and `route.png` will be generated in order to vizualize the network and the optimal routes.
+In addition, if you want to export images of the network and routes, use `--graph` option:
+
+```shell
+$ ./cvrptw.py --graph data.sample.json
+```
+
+It also generates `network.png` and `route.png` for vizualizing the network and the routes of vehicles.
+
+`data.sample.json` is just sample data of a problem, so if you want to solve your own, copy `data.sample.json` and create your own `data.json`! 💪
