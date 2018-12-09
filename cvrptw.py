@@ -196,14 +196,25 @@ def draw_route_graph(data, routing, assignment):
 
     print(f'The route graph has been saved to {filename}.')
 
-def main(enable_guided_local_search: bool = False, export_graph: bool = False):
+def parse_args():
+    """
+    Parse command line arguments.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path', help='JSON file path of data')
+    parser.add_argument(
+        '-g', '--graph',
+        help='export images of the network and the routes of vehicles', action='store_true',
+    )
+    parser.add_argument('--gls', help='enable Guided Local Search', action='store_true')
+    return parser.parse_args()
+
+def main():
     """
     Entry point of the program.
     """
     # Parse command line arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('path')
-    args = parser.parse_args()
+    args = parse_args()
 
     # Instantiate the data problem
     data = load_data_model(args.path)
@@ -232,7 +243,7 @@ def main(enable_guided_local_search: bool = False, export_graph: bool = False):
     # pylint: disable=no-member
     search_params.first_solution_strategy = \
         routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    if enable_guided_local_search:
+    if args.gls:
         # pylint: disable=no-member
         search_params.local_search_metaheuristic = \
                 routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
@@ -248,9 +259,10 @@ def main(enable_guided_local_search: bool = False, export_graph: bool = False):
     print_solution(data, routing, assignment)
 
     # Draw a network graph
-    if export_graph:
+    if args.graph:
+        print()
         draw_network_graph(data)
         draw_route_graph(data, routing, assignment)
 
 if __name__ == '__main__':
-    main(enable_guided_local_search=False, export_graph=True)
+    main()
