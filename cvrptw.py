@@ -167,7 +167,7 @@ def print_solution(data: dict, routing: pywrapcp.RoutingModel,
     print(f'Total time of all routes: {total_time} min')
 
 
-def draw_network_graph(data: dict):
+def draw_network_graph(data: dict, filename: str = 'network.png', prog: str = 'dot'):
     """
     Draw a network graph of the problem.
     """
@@ -187,14 +187,16 @@ def draw_network_graph(data: dict):
             weight = weights[i][j]
             graph.add_edge(_node(i), _node(j), weight=weight, label=weight)
 
-    filename = 'network.png'
-    graph.draw(filename, prog='dot')
+    graph.draw(filename, prog=prog)
 
     print(f'The network graph has been saved to {filename}.')
 
 
-def draw_route_graph(data: dict, routing: pywrapcp.RoutingModel,
-                     assignment: pywrapcp.Assignment):
+def draw_route_graph(data: dict,
+                     routing: pywrapcp.RoutingModel,
+                     assignment: pywrapcp.Assignment,
+                     filename: str = 'route.png',
+                     prog='sfdp'):
     """
     Draw a route graph based on the solution of the problem.
     """
@@ -223,8 +225,7 @@ def draw_route_graph(data: dict, routing: pywrapcp.RoutingModel,
             )
             index = next_index
 
-    filename = 'route.png'
-    graph.draw(filename, prog='sfdp')
+    graph.draw(filename, prog=prog)
 
     print(f'The route graph has been saved to {filename}.')
 
