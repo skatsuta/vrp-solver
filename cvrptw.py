@@ -99,9 +99,9 @@ def add_time_window_constraints(routing, data, time_callback):
         name=time,
     )
     time_dimension = routing.GetDimensionOrDie(time)
-    for loc_node, (start_time, end_time) in enumerate(data['time_windows']):
+    for loc_node, (open_time, close_time) in enumerate(data['time_windows']):
         index = routing.NodeToIndex(loc_node)
-        time_dimension.CumulVar(index).SetRange(start_time, end_time)
+        time_dimension.CumulVar(index).SetRange(open_time, close_time)
 
 def node_properties(routing, assignment, capacity_dimension, time_dimension, index) -> tuple:
     """
