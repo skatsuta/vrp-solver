@@ -247,6 +247,12 @@ def parse_args() -> argparse.Namespace:
         help='enable Guided Local Search',
         action='store_true',
     )
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        help='enable verbose output',
+        action='store_true',
+    )
     return parser.parse_args()
 
 
@@ -289,6 +295,8 @@ def main():
         search_params.local_search_metaheuristic = \
                 routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
         search_params.time_limit_ms = 30000
+    if args.verbose:
+        search_params.log_search = True
 
     # Solve the problem
     assignment = routing.SolveWithParameters(search_params)
