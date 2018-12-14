@@ -4,7 +4,7 @@ Solve the Capacitated Vehicle Routing Problem with Time Windows (CVRPTW).
 """
 
 import argparse
-import json
+import yaml
 import pygraphviz as pgv
 
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
@@ -15,7 +15,7 @@ def load_data_model(path: str) -> dict:
     Load the data for the problem from path.
     """
     with open(path) as file:
-        data = json.load(file)
+        data = yaml.load(file)
 
     data['num_locations'] = len(data['time_windows'])
     data['num_vehicles'] = len(data['vehicle_capacities'])

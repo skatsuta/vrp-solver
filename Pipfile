@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 ortools = "*"
 pygraphviz = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"
