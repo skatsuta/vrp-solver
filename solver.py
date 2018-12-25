@@ -37,7 +37,7 @@ def create_weight_callback(data: dict):
     return weight_callback
 
 
-def create_demand_callback(data: dict):
+def create_demand_callback(demands: list):
     """
     Create a callback to get demands at each location.
     """
@@ -46,23 +46,22 @@ def create_demand_callback(data: dict):
         """
         Return the demand.
         """
-        return data['demands'][from_node]
+        return demands[from_node]
 
     return demand_callback
 
 
-def add_capacity_constraints(routing: pywrapcp.RoutingModel, data: dict,
-                             demand_callback):
+def add_capacity_constraints(routing: pywrapcp.RoutingModel, demand_callback,
+                             vehicle_capacities: list, name: str):
     """
     Add capacity constraints.
     """
     routing.AddDimensionWithVehicleCapacity(
         evaluator=demand_callback,
         slack_max=0,  # null slack
-        # vehicle maximum capacities
-        vehicle_capacities=data['vehicle_capacities'],
+        vehicle_capacities=vehicle_capacities,  # vehicle maximum capacities
         fix_start_cumul_to_zero=True,  # start cumul to zero
-        name='Capacity',
+        name=name,
     )
 
 
@@ -94,13 +93,14 @@ def create_time_callback(data: dict):
     return time_callback
 
 
-def add_time_window_constraints(routing: pywrapcp.RoutingModel, data: dict,
-                                time_callback):
+def add_time_window_constraints(routing: pywrapcp.RoutingModel,
+                                data: dict,
+                                time_callback,
+                                horizon: int = 120):
     """
     Add time window constraints.
     """
     time = 'Time'
-    horizon = 120
     routing.AddDimension(
         evaluator=time_callback,
         slack_max=horizon,  # allow waiting time
@@ -119,18 +119,18 @@ def add_time_window_constraints(routing: pywrapcp.RoutingModel, data: dict,
 def node_properties(
         routing: pywrapcp.RoutingModel,
         assignment: pywrapcp.Assignment,
-        capacity_dimension: pywrapcp.RoutingDimension,
         time_dimension: pywrapcp.RoutingDimension,
+        capacity_dimensions: list,
         index: int,
 ) -> tuple:
     """
     Get a node's properties on the index.
     """
     node_index = routing.IndexToNode(index)
-    load = assignment.Value(capacity_dimension.CumulVar(index))
     time_var = time_dimension.CumulVar(index)
     time_min, time_max = assignment.Min(time_var), assignment.Max(time_var)
-    return (node_index, load, time_min, time_max)
+    loads = [assignment.Value(cap_dim.CumulVar(index)) for cap_dim in capacity_dimensions]
+    return (node_index, time_min, time_max, *loads)
 
 
 def print_solution(data: dict, routing: pywrapcp.RoutingModel,
@@ -138,8 +138,8 @@ def print_solution(data: dict, routing: pywrapcp.RoutingModel,
     """
     Print routes on console.
     """
-    capacity_dimension = routing.GetDimensionOrDie('Capacity')
     time_dimension = routing.GetDimensionOrDie('Time')
+    capacity_dimensions = [routing.GetDimensionOrDie(name) for name in ['Capacity', 'Capacity2']]
     total_time = 0
 
     for vehicle_id in range(data['num_vehicles']):
@@ -147,19 +147,20 @@ def print_solution(data: dict, routing: pywrapcp.RoutingModel,
         node_props = []
 
         while not routing.IsEnd(index):
-            props = node_properties(routing, assignment, capacity_dimension,
-                                    time_dimension, index)
+            props = node_properties(routing, assignment, time_dimension,
+                                    capacity_dimensions, index)
             node_props.append(props)
             index = assignment.Value(routing.NextVar(index))
 
-        props = node_properties(routing, assignment, capacity_dimension,
-                                time_dimension, index)
+        props = node_properties(routing, assignment, time_dimension,
+                                capacity_dimensions, index)
         node_props.append(props)
         route_time = assignment.Value(time_dimension.CumulVar(index))
-        route = "\n  -> ".join(['[Node %2s: Load(%s) Time(%2s, %s)]' % prop \
+        route = "\n  -> ".join(['[Node %2s: Time(%3s, %3s) Load(%s) Load2(%s)]' % prop \
                                 for prop in node_props])
         plan_output = f'Route for vehicle {vehicle_id}:\n  {route}\n' + \
-            f'Load of the route: {props[1]}\nTime of the route: {route_time} min\n'
+            f'Load of the route: {props[3]}\nLoad2 of the route: {props[4]}\n' + \
+            f'Time of the route: {route_time} min\n'
         print(plan_output)
 
         total_time += route_time
@@ -172,7 +173,7 @@ def draw_network_graph(data: dict, filename: str = 'network.png', prog: str = 'd
     Draw a network graph of the problem.
     """
     weights = data['weights']
-    demands = data['demands']
+    demands, demands2 = data['demands'], data['demands2']
     time_windows = data['time_windows']
     n_loc = data['num_locations']
     graph = pgv.AGraph(directed=False)
@@ -180,7 +181,8 @@ def draw_network_graph(data: dict, filename: str = 'network.png', prog: str = 'd
     def _node(index: int) -> str:
         if index == 0:
             return f'{index}\nDepot'
-        return f'{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}'
+        return f'{index}\nDemand: {demands[index]}\nDemand2: {demands2[index]}\n' + \
+            f'Range: {time_windows[index]}'
 
     for i in range(n_loc):
         for j in range(i + 1, n_loc):
@@ -201,14 +203,15 @@ def draw_route_graph(data: dict,
     Draw a route graph based on the solution of the problem.
     """
     weights = data['weights']
-    demands = data['demands']
+    demands, demands2 = data['demands'], data['demands2']
     time_windows = data['time_windows']
     graph = pgv.AGraph(directed=True)
 
     def _node(index: int) -> str:
         if index == 0:
             return f'{index}\nDepot'
-        return f'{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}'
+        return f'{index}\nDemand: {demands[index]}\nDemand2: {demands2[index]}\n' + \
+            f'Range: {time_windows[index]}'
 
     for vehicle_id in range(data['num_vehicles']):
         index = routing.Start(vehicle_id)
@@ -278,8 +281,20 @@ def main():
     routing.SetArcCostEvaluatorOfAllVehicles(weight_callback)
 
     # Add capacity constraints
-    demand_callback = create_demand_callback(data)
-    add_capacity_constraints(routing, data, demand_callback)
+    demand_callback = create_demand_callback(demands=data['demands'])
+    add_capacity_constraints(
+        routing,
+        demand_callback,
+        vehicle_capacities=data['vehicle_capacities'],
+        name='Capacity',
+    )
+    demand2_callback = create_demand_callback(demands=data['demands2'])
+    add_capacity_constraints(
+        routing,
+        demand2_callback,
+        vehicle_capacities=data['vehicle_capacities2'],
+        name='Capacity2',
+    )
 
     # Add time window constraints
     time_callback = create_time_callback(data)
