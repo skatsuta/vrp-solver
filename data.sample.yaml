@@ -19,7 +19,8 @@ weights: [
   [7, 14,  9, 16, 14,  8,  5, 10,  6,  5,  4, 10,  8,  6,  2,  9,  0]
 ]
 service_times: [0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
-demands: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+demands:  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+demands2: [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0]
 time_windows: [
  [ 0,   0],
  [75,  95],
@@ -41,7 +42,8 @@ time_windows: [
 ]
 
 # Vehicle settings
-vehicle_capacities: [10, 10, 10]
+vehicle_capacities:  [10, 10, 10]
+vehicle_capacities2: [1, 1, 1]
 
 # Route settings
 depot: 0
