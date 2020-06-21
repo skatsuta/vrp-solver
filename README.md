@@ -56,36 +56,36 @@ It should output the solution as follows:
 ```
 Route for vehicle 0:
   [Node  0: Load(0) Time( 0, 0)]
-  -> [Node  9: Load(0) Time( 2, 20)]
-  -> [Node 14: Load(1) Time(10, 30)]
-  -> [Node 16: Load(2) Time(30, 50)]
-  -> [Node 15: Load(3) Time(45, 65)]
-  -> [Node 11: Load(4) Time(85, 105)]
-  -> [Node  0: Load(5) Time(96, 120)]
-Load of the route: 5
-Time of the route: 96 min
+  -> [Node  9: Load(0) Time( 2, 5)]
+  -> [Node  8: Load(1) Time(10, 13)]
+  -> [Node  5: Load(2) Time(17, 20)]
+  -> [Node  4: Load(4) Time(35, 55)]
+  -> [Node  3: Load(7) Time(60, 67)]
+  -> [Node  1: Load(9) Time(68, 75)]
+  -> [Node  0: Load(10) Time(79, 120)]
+Load of the route: 10
+Time of the route: 79 min
 
 Route for vehicle 1:
   [Node  0: Load(0) Time( 0, 8)]
   -> [Node  7: Load(0) Time( 2, 10)]
-  -> [Node 13: Load(1) Time(15, 18)]
-  -> [Node 12: Load(2) Time(22, 25)]
-  -> [Node  4: Load(3) Time(35, 55)]
-  -> [Node  3: Load(4) Time(60, 67)]
-  -> [Node  1: Load(5) Time(68, 75)]
-  -> [Node  0: Load(6) Time(79, 120)]
-Load of the route: 6
-Time of the route: 79 min
+  -> [Node 13: Load(3) Time(15, 18)]
+  -> [Node 12: Load(6) Time(22, 25)]
+  -> [Node 15: Load(8) Time(45, 65)]
+  -> [Node 11: Load(9) Time(85, 105)]
+  -> [Node  0: Load(10) Time(96, 120)]
+Load of the route: 10
+Time of the route: 96 min
 
 Route for vehicle 2:
-  [Node  0: Load(0) Time( 0, 17)]
-  -> [Node  5: Load(0) Time( 3, 20)]
-  -> [Node  8: Load(1) Time(10, 30)]
-  -> [Node  6: Load(2) Time(55, 75)]
-  -> [Node  2: Load(3) Time(75, 86)]
-  -> [Node 10: Load(4) Time(84, 95)]
-  -> [Node  0: Load(5) Time(95, 120)]
-Load of the route: 5
+  [Node  0: Load(0) Time( 0, 25)]
+  -> [Node 14: Load(0) Time(10, 30)]
+  -> [Node 16: Load(3) Time(30, 50)]
+  -> [Node  6: Load(4) Time(55, 75)]
+  -> [Node  2: Load(7) Time(75, 86)]
+  -> [Node 10: Load(8) Time(84, 95)]
+  -> [Node  0: Load(10) Time(95, 120)]
+Load of the route: 10
 Time of the route: 95 min
 
 Total time of all routes: 270 min
