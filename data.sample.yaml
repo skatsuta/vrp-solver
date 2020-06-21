@@ -1,4 +1,5 @@
-# Node settings
+# Weights (i.e costs, such as time) between nodes
+# For example, cost 6 at index (0, 1) represents a cost between node 0 and 1 is 6
 weights: [
   [0,  6,  9,  8,  6,  3,  6,  2,  3,  2,  6,  6,  4,  4,  5,  9,  7],
   [6,  0,  8,  3,  2,  6,  8,  4,  8,  8, 13,  7,  5,  8, 12, 10, 14],
@@ -18,8 +19,12 @@ weights: [
   [9, 10, 18,  6,  8, 12, 15,  8, 13,  9, 13,  3,  4,  5,  9,  0,  9],
   [7, 14,  9, 16, 14,  8,  5, 10,  6,  5,  4, 10,  8,  6,  2,  9,  0]
 ]
+# Times it takes for a vehicle to leave from the time it stops at each node
 service_times: [0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+# Demands corresponding to the quantity (such as volume) of items to be picked up
 demands: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# Time windows for nodes which are considered as requested times for a visit
+# Vehicles must visit a node within its time window
 time_windows: [
  [ 0,   0],
  [55,  75],
@@ -40,8 +45,8 @@ time_windows: [
  [30,  50]
 ]
 
-# Vehicle settings
+# Vehicle capacities
 vehicle_capacities: [10, 10, 10]
 
-# Route settings
+# Index of the start node
 depot: 0
