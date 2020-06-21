@@ -20,7 +20,7 @@ the program provides the solution as follows:
 
 ## Prerequisites
 
-Python 3.6 or later is required.
+Python 3.8 or later is required.
 
 
 ## Usage
@@ -28,11 +28,18 @@ Python 3.6 or later is required.
 First, install the dependencies:
 
 ```shell
+# Install Graphviz on macOS (On other platforms, use their own package managers)
 $ brew install graphviz --with-gts --with-librsvg --with-pango
-$ pip install ortools pyyaml pygraphviz
+
+# Create a Python virtual environment
+$ python -m venv .venv
+# Activate the virtualenv
+$ source .venv/bin/activate
+# Install the dependent Python modules
+$ pip install -r requirements.txt
 ```
 
-Alternatively, if you have `pipenv` installed, run the following command instead of the second line above:
+Alternatively, if you have `pipenv` installed, run the following command instead of the second to fourth line above:
 
 ```shell
 $ pipenv install
@@ -87,7 +94,7 @@ Total time of all routes: 277 min
 In addition, if you want to export images of the network and routes, use `-g/--graph` option:
 
 ```shell
-$ ./cvrptw.py --graph data.sample.yaml
+$ ./solver.py --graph data.sample.yaml
 ```
 
 It also generates `network.png` and `route.png` for vizualizing the network and the routes of vehicles.
