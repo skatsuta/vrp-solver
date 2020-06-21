@@ -70,12 +70,12 @@ Route for vehicle 1:
   -> [Node  7: Load(0) Time( 2, 10)]
   -> [Node 13: Load(1) Time(15, 18)]
   -> [Node 12: Load(2) Time(22, 25)]
-  -> [Node  4: Load(3) Time(45, 65)]
-  -> [Node  3: Load(4) Time(60, 80)]
-  -> [Node  1: Load(5) Time(75, 95)]
-  -> [Node  0: Load(6) Time(86, 120)]
+  -> [Node  4: Load(3) Time(35, 55)]
+  -> [Node  3: Load(4) Time(60, 67)]
+  -> [Node  1: Load(5) Time(68, 75)]
+  -> [Node  0: Load(6) Time(79, 120)]
 Load of the route: 6
-Time of the route: 86 min
+Time of the route: 79 min
 
 Route for vehicle 2:
   [Node  0: Load(0) Time( 0, 17)]
@@ -88,7 +88,7 @@ Route for vehicle 2:
 Load of the route: 5
 Time of the route: 95 min
 
-Total time of all routes: 277 min
+Total time of all routes: 270 min
 ```
 
 In addition, if you want to export images of the network and routes, use `-g/--graph` option:
