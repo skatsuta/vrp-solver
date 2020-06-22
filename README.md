@@ -39,10 +39,11 @@ $ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
-Alternatively, if you have `pipenv` installed, run the following command instead of the second to fourth line above:
+Alternatively, if you have `pipenv` installed, run the following commands instead of the second to fourth line above:
 
 ```shell
 $ pipenv install
+$ pipenv shell
 ```
 
 Then, let's solve a sample problem!
