@@ -29,7 +29,7 @@ First, install the dependencies:
 
 ```shell
 # Install Graphviz on macOS (On other platforms, use their own package managers)
-$ brew install graphviz --with-gts --with-librsvg --with-pango
+$ brew install graphviz
 
 # Create a Python virtual environment
 $ python -m venv .venv
