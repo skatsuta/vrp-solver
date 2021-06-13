@@ -11,16 +11,16 @@ This program solves Capacitated Vehicle Routing Problem with Time Windows (CVRPT
 
 For example, given the following network and three vehicles at the depot (node 0) to pick up all demands on all nodes in as short a time period as possible,
 
-![network](network.png)
+![network](docs/network.png)
 
-the program provides the solution as follows:
+the program provides the solution like the following:
 
-![route](route.png)
+![route](docs/route.png)
 
 
 ## Prerequisites
 
-Python 3.8 or later is required.
+Python 3.9 or later is required.
 
 
 ## Usage
@@ -39,20 +39,20 @@ $ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
-Alternatively, if you have `pipenv` installed, run the following commands instead of the second to fourth line above:
+Alternatively, if you have Poetry installed, run the following commands instead of the second to fourth line above:
 
 ```shell
-$ pipenv install
-$ pipenv shell
+$ poetry install
+$ poetry shell
 ```
 
 Then, let's solve a sample problem!
 
 ```shell
-$ ./solver.py data.sample.yaml
+$ python solver.py data.sample.yaml
 ```
 
-It should output the solution as follows:
+It should output the solution like this:
 
 ```
 Route for vehicle 0:
@@ -92,12 +92,14 @@ Time of the route: 95 min
 Total time of all routes: 270 min
 ```
 
-In addition, if you want to export images of the network and routes, use `-g/--graph` option:
+In addition, if you want to export images of the network and routes, you can specify filenames for them using `-n/--export-network-graph` and `-r/--export-route-graph` options:
 
 ```shell
-$ ./solver.py --graph data.sample.yaml
+$ python solver.py data.sample.yaml \
+  --export-network-graph network.png \
+  --export-route-graph route.png
 ```
 
-It also generates `network.png` and `route.png` for vizualizing the network and the routes of vehicles.
+Then the program saves the network image to `network.png` and the route image to `route.png` for vizualizing the network and the routes of vehicles.
 
 `data.sample.yaml` is just sample data of a problem, so if you want to solve your own, copy `data.sample.yaml` and create your own `data.yaml`! 💪
