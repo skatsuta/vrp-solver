@@ -23,6 +23,98 @@ TransitCallback = Callable[[int, int], int]
 UnaryTransitCallback = Callable[[int], int]
 
 
+def main() -> None:
+    """
+    Entry point of the program.
+    """
+
+    # Parse command line arguments
+    args = parse_args()
+
+    # Instantiate the data problem
+    data = load_data_model(args.path)
+
+    # Create the Routing Index Manager and Routing Model
+    manager = RoutingIndexManager(
+        data["num_locations"], data["num_vehicles"], data["depot"]
+    )
+    routing = RoutingModel(manager)
+
+    # Define weight of each edge
+    weight_callback_index = routing.RegisterTransitCallback(
+        create_weight_callback(manager, data)
+    )
+    routing.SetArcCostEvaluatorOfAllVehicles(weight_callback_index)
+
+    # Add capacity constraints
+    demand_callback = create_demand_callback(manager, data)
+    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
+    add_capacity_constraints(routing, manager, data, demand_callback_index)
+
+    # Add time window constraints
+    time_callback_index = routing.RegisterTransitCallback(
+        create_time_callback(manager, data)
+    )
+    add_time_window_constraints(routing, manager, data, time_callback_index)
+
+    # Set first solution heuristic (cheapest addition)
+    search_params = DefaultRoutingSearchParameters()
+    # pylint: disable=no-member
+    search_params.first_solution_strategy = FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    if args.gls:
+        # pylint: disable=no-member
+        search_params.local_search_metaheuristic = (
+            LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        )
+        # NOTE: Since Guided Local Search could take a very long time, we set a
+        # reasonable time limit
+        search_params.time_limit.seconds = 30
+    if args.verbose:
+        search_params.log_search = True
+
+    # Solve the problem
+    assignment = routing.SolveWithParameters(search_params)
+    if not assignment:
+        print("No solution found.")
+        return
+
+    # Print the solution
+    print_solution(data, routing, manager, assignment)
+
+    # Draw network and route graphs
+    if args.graph:
+        print()
+        draw_network_graph(data)
+        draw_route_graph(data, routing, manager, assignment)
+
+
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command line arguments.
+    """
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", help="JSON file path of data")
+    parser.add_argument(
+        "-g",
+        "--graph",
+        help="export images of the network and the routes of vehicles",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--gls",
+        help=(
+            "enable Guided Local Search (Note: This could take a long time, so it's"
+            " a good idea to use --gls with -v to see the progress of a search)"
+        ),
+        action="store_true",
+    )
+    parser.add_argument(
+        "-v", "--verbose", help="enable verbose output", action="store_true"
+    )
+    return parser.parse_args()
+
+
 def load_data_model(path: str) -> dict:
     """
     Load the data for the problem from path.
@@ -140,24 +232,6 @@ def add_time_window_constraints(
         time_dimension.CumulVar(index).SetRange(open_time, close_time)
 
 
-def node_properties(
-    manager: RoutingIndexManager,
-    assignment: Assignment,
-    capacity_dimension: RoutingDimension,
-    time_dimension: RoutingDimension,
-    index: int,
-) -> tuple:
-    """
-    Get a node's properties corresponding to the index.
-    """
-
-    node_index = manager.IndexToNode(index)
-    load = assignment.Value(capacity_dimension.CumulVar(index))
-    time_var = time_dimension.CumulVar(index)
-    time_min, time_max = assignment.Min(time_var), assignment.Max(time_var)
-    return (node_index, load, time_min, time_max)
-
-
 def print_solution(
     data: dict,
     routing: RoutingModel,
@@ -200,6 +274,24 @@ def print_solution(
         total_time += route_time
 
     print(f"Total time of all routes: {total_time} min")
+
+
+def node_properties(
+    manager: RoutingIndexManager,
+    assignment: Assignment,
+    capacity_dimension: RoutingDimension,
+    time_dimension: RoutingDimension,
+    index: int,
+) -> tuple:
+    """
+    Get a node's properties corresponding to the index.
+    """
+
+    node_index = manager.IndexToNode(index)
+    load = assignment.Value(capacity_dimension.CumulVar(index))
+    time_var = time_dimension.CumulVar(index)
+    time_min, time_max = assignment.Min(time_var), assignment.Max(time_var)
+    return (node_index, load, time_min, time_max)
 
 
 def draw_network_graph(
@@ -267,98 +359,6 @@ def draw_route_graph(
     graph.draw(filename, prog=prog)
 
     print(f"The route graph has been saved to {filename}.")
-
-
-def parse_args() -> argparse.Namespace:
-    """
-    Parse command line arguments.
-    """
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("path", help="JSON file path of data")
-    parser.add_argument(
-        "-g",
-        "--graph",
-        help="export images of the network and the routes of vehicles",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--gls",
-        help=(
-            "enable Guided Local Search (Note: This could take a long time, so it's"
-            " a good idea to use --gls with -v to see the progress of a search)"
-        ),
-        action="store_true",
-    )
-    parser.add_argument(
-        "-v", "--verbose", help="enable verbose output", action="store_true"
-    )
-    return parser.parse_args()
-
-
-def main():
-    """
-    Entry point of the program.
-    """
-
-    # Parse command line arguments
-    args = parse_args()
-
-    # Instantiate the data problem
-    data = load_data_model(args.path)
-
-    # Create the Routing Index Manager and Routing Model
-    manager = RoutingIndexManager(
-        data["num_locations"], data["num_vehicles"], data["depot"]
-    )
-    routing = RoutingModel(manager)
-
-    # Define weight of each edge
-    weight_callback_index = routing.RegisterTransitCallback(
-        create_weight_callback(manager, data)
-    )
-    routing.SetArcCostEvaluatorOfAllVehicles(weight_callback_index)
-
-    # Add capacity constraints
-    demand_callback = create_demand_callback(manager, data)
-    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
-    add_capacity_constraints(routing, manager, data, demand_callback_index)
-
-    # Add time window constraints
-    time_callback_index = routing.RegisterTransitCallback(
-        create_time_callback(manager, data)
-    )
-    add_time_window_constraints(routing, manager, data, time_callback_index)
-
-    # Set first solution heuristic (cheapest addition)
-    search_params = DefaultRoutingSearchParameters()
-    # pylint: disable=no-member
-    search_params.first_solution_strategy = FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    if args.gls:
-        # pylint: disable=no-member
-        search_params.local_search_metaheuristic = (
-            LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-        )
-        # NOTE: Since Guided Local Search could take a very long time, we set a
-        # reasonable time limit
-        search_params.time_limit.seconds = 30
-    if args.verbose:
-        search_params.log_search = True
-
-    # Solve the problem
-    assignment = routing.SolveWithParameters(search_params)
-    if not assignment:
-        print("No solution found.")
-        return
-
-    # Print the solution
-    print_solution(data, routing, manager, assignment)
-
-    # Draw network and route graphs
-    if args.graph:
-        print()
-        draw_network_graph(data)
-        draw_route_graph(data, routing, manager, assignment)
 
 
 if __name__ == "__main__":
