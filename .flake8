@@ -1,0 +1,5 @@
+# Black compatible configurations for Flake8
+# Ref. https://black.readthedocs.io/en/stable/compatible_configs.html#flake8
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
