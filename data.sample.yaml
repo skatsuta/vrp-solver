@@ -44,6 +44,8 @@ time_windows: [
  [45,  65],
  [30,  50]
 ]
+# The maximum time per vehicle
+max_time: 100
 
 # Vehicle capacities
 vehicle_capacities: [10, 10, 10]

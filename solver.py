@@ -222,7 +222,7 @@ def add_time_window_constraints(
     Add time window constraints.
     """
 
-    horizon = 120
+    horizon = data["max_time"]
     routing.AddDimension(
         time_callback_index,
         slack_max=horizon,  # allow waiting time
