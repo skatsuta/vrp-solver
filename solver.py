@@ -40,7 +40,7 @@ def main() -> None:
     )
     routing = RoutingModel(manager)
 
-    # Define weight of each edge
+    # Define weights of edges
     weight_callback_index = routing.RegisterTransitCallback(
         create_weight_callback(manager, data)
     )
@@ -59,10 +59,8 @@ def main() -> None:
 
     # Set first solution heuristic (cheapest addition)
     search_params = DefaultRoutingSearchParameters()
-    # pylint: disable=no-member
     search_params.first_solution_strategy = FirstSolutionStrategy.PATH_CHEAPEST_ARC
     if args.gls:
-        # pylint: disable=no-member
         search_params.local_search_metaheuristic = (
             LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
         )
@@ -81,11 +79,11 @@ def main() -> None:
     # Print the solution
     print_solution(data, routing, manager, assignment)
 
-    # Draw network and route graphs
-    if args.graph:
-        print()
-        draw_network_graph(data)
-        draw_route_graph(data, routing, manager, assignment)
+    # Export network and route graphs
+    if args.export_network_graph:
+        draw_network_graph(args.export_network_graph, data)
+    if args.export_route_graph:
+        draw_route_graph(args.export_route_graph, data, routing, manager, assignment)
 
 
 def parse_args() -> argparse.Namespace:
@@ -94,12 +92,8 @@ def parse_args() -> argparse.Namespace:
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("path", help="JSON file path of data")
     parser.add_argument(
-        "-g",
-        "--graph",
-        help="export images of the network and the routes of vehicles",
-        action="store_true",
+        "path", help="JSON or YAML file that represents a vehicle routing problem"
     )
     parser.add_argument(
         "--gls",
@@ -108,6 +102,18 @@ def parse_args() -> argparse.Namespace:
             " a good idea to use --gls with -v to see the progress of a search)"
         ),
         action="store_true",
+    )
+    parser.add_argument(
+        "-n",
+        "--export-network-graph",
+        metavar="NETWORK_FILE",
+        help="file to save an image of the given network",
+    )
+    parser.add_argument(
+        "-r",
+        "--export-route-graph",
+        metavar="ROUTE_FILE",
+        help="file to save an image of the the routes of vehicles",
     )
     parser.add_argument(
         "-v", "--verbose", help="enable verbose output", action="store_true"
@@ -120,7 +126,7 @@ def load_data_model(path: str) -> dict:
     Load the data for the problem from path.
     """
 
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         data = yaml.safe_load(file)
 
     data["num_locations"] = len(data["time_windows"])
@@ -294,9 +300,7 @@ def node_properties(
     return (node_index, load, time_min, time_max)
 
 
-def draw_network_graph(
-    data: dict, filename: str = "network.png", prog: str = "dot"
-) -> None:
+def draw_network_graph(filename: str, data: dict, prog: str = "dot") -> None:
     """
     Draw a network graph of the problem.
     """
@@ -323,11 +327,11 @@ def draw_network_graph(
 
 
 def draw_route_graph(
+    filename: str,
     data: dict,
     routing: RoutingModel,
     manager: RoutingIndexManager,
     assignment: Assignment,
-    filename: str = "route.png",
     prog="sfdp",
 ) -> None:
     """
