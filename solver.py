@@ -3,25 +3,20 @@ Solve the Capacitated Vehicle Routing Problem with Time Windows (CVRPTW).
 """
 
 import argparse
+from collections import abc
 from pathlib import Path
-from typing import Callable, Literal, TypeAlias
+from typing import Literal, TypeAlias
 
 import graphviz as gv
 import yaml
-from ortools.constraint_solver.pywrapcp import (
-    Assignment,
-    DefaultRoutingSearchParameters,
-    RoutingDimension,
-    RoutingIndexManager,
-    RoutingModel,
-)
+from ortools.constraint_solver import pywrapcp as cp
 from ortools.constraint_solver.routing_enums_pb2 import (
     FirstSolutionStrategy,
     LocalSearchMetaheuristic,
 )
 
-TransitCallback = Callable[[int, int], int]
-UnaryTransitCallback = Callable[[int], int]
+TransitCallback: TypeAlias = abc.Callable[[int, int], int]
+UnaryTransitCallback: TypeAlias = abc.Callable[[int], int]
 
 # Ref. https://graphviz.org/docs/layouts/
 LayoutEngine: TypeAlias = Literal[
@@ -41,10 +36,10 @@ def main() -> None:
     data = load_data_model(args.path)
 
     # Create the Routing Index Manager and Routing Model
-    manager = RoutingIndexManager(
+    manager = cp.RoutingIndexManager(
         data["num_locations"], data["num_vehicles"], data["depot"]
     )
-    routing = RoutingModel(manager)
+    routing = cp.RoutingModel(manager)
 
     # Define weights of edges
     weight_callback_index = routing.RegisterTransitCallback(
@@ -64,7 +59,7 @@ def main() -> None:
     add_time_window_constraints(routing, manager, data, time_callback_index)
 
     # Set first solution heuristic (cheapest addition)
-    search_params = DefaultRoutingSearchParameters()
+    search_params = cp.DefaultRoutingSearchParameters()
     search_params.first_solution_strategy = FirstSolutionStrategy.PATH_CHEAPEST_ARC
     if args.gls:
         search_params.local_search_metaheuristic = (
@@ -141,7 +136,9 @@ def load_data_model(path: str) -> dict:
     return data
 
 
-def create_weight_callback(manager: RoutingIndexManager, data: dict) -> TransitCallback:
+def create_weight_callback(
+    manager: cp.RoutingIndexManager, data: dict
+) -> TransitCallback:
     """
     Create a callback to return the weight between points.
     """
@@ -159,7 +156,7 @@ def create_weight_callback(manager: RoutingIndexManager, data: dict) -> TransitC
 
 
 def create_demand_callback(
-    manager: RoutingIndexManager, data: dict
+    manager: cp.RoutingIndexManager, data: dict
 ) -> UnaryTransitCallback:
     """
     Create a callback to get demands at each location.
@@ -177,8 +174,8 @@ def create_demand_callback(
 
 
 def add_capacity_constraints(
-    routing: RoutingModel,
-    manager: RoutingIndexManager,
+    routing: cp.RoutingModel,
+    manager: cp.RoutingIndexManager,
     data: dict,
     demand_callback_index: int,
 ) -> None:
@@ -195,7 +192,9 @@ def add_capacity_constraints(
     )
 
 
-def create_time_callback(manager: RoutingIndexManager, data: dict) -> TransitCallback:
+def create_time_callback(
+    manager: cp.RoutingIndexManager, data: dict
+) -> TransitCallback:
     """
     Create a callback to get total times between locations.
     """
@@ -219,8 +218,8 @@ def create_time_callback(manager: RoutingIndexManager, data: dict) -> TransitCal
 
 
 def add_time_window_constraints(
-    routing: RoutingModel,
-    manager: RoutingIndexManager,
+    routing: cp.RoutingModel,
+    manager: cp.RoutingIndexManager,
     data: dict,
     time_callback_index: int,
 ) -> None:
@@ -246,9 +245,9 @@ def add_time_window_constraints(
 
 def print_solution(
     data: dict,
-    routing: RoutingModel,
-    manager: RoutingIndexManager,
-    assignment: Assignment,
+    routing: cp.RoutingModel,
+    manager: cp.RoutingIndexManager,
+    assignment: cp.Assignment,
 ) -> None:
     """
     Print the solution.
@@ -289,10 +288,10 @@ def print_solution(
 
 
 def node_properties(
-    manager: RoutingIndexManager,
-    assignment: Assignment,
-    capacity_dimension: RoutingDimension,
-    time_dimension: RoutingDimension,
+    manager: cp.RoutingIndexManager,
+    assignment: cp.Assignment,
+    capacity_dimension: cp.RoutingDimension,
+    time_dimension: cp.RoutingDimension,
     index: int,
 ) -> tuple:
     """
@@ -338,9 +337,9 @@ def draw_network_graph(filename: str, data: dict) -> None:
 def draw_route_graph(
     filename: str,
     data: dict,
-    routing: RoutingModel,
-    manager: RoutingIndexManager,
-    assignment: Assignment,
+    routing: cp.RoutingModel,
+    manager: cp.RoutingIndexManager,
+    assignment: cp.Assignment,
 ) -> None:
     """
     Draw a route graph based on the solution of the problem.
