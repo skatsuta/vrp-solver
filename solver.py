@@ -3,9 +3,10 @@ Solve the Capacitated Vehicle Routing Problem with Time Windows (CVRPTW).
 """
 
 import argparse
-from typing import Callable
+from pathlib import Path
+from typing import Callable, Literal, TypeAlias
 
-import pygraphviz as pgv
+import graphviz as gv
 import yaml
 from ortools.constraint_solver.pywrapcp import (
     Assignment,
@@ -21,6 +22,11 @@ from ortools.constraint_solver.routing_enums_pb2 import (
 
 TransitCallback = Callable[[int, int], int]
 UnaryTransitCallback = Callable[[int], int]
+
+# Ref. https://graphviz.org/docs/layouts/
+LayoutEngine: TypeAlias = Literal[
+    "dot", "neato", "fdp", "sfdp", "circo", "twopi", "osage"
+]
 
 
 def main() -> None:
@@ -300,7 +306,7 @@ def node_properties(
     return (node_index, load, time_min, time_max)
 
 
-def draw_network_graph(filename: str, data: dict, prog: str = "dot") -> None:
+def draw_network_graph(filename: str, data: dict) -> None:
     """
     Draw a network graph of the problem.
     """
@@ -309,19 +315,22 @@ def draw_network_graph(filename: str, data: dict, prog: str = "dot") -> None:
     demands = data["demands"]
     time_windows = data["time_windows"]
     n_loc = data["num_locations"]
-    graph = pgv.AGraph(directed=False)
+    graph = gv.Digraph(name="network")
 
-    def _node(index: int) -> str:
+    def _node_label(index: int) -> str:
         if index == 0:
             return f"{index}\nDepot"
         return f"{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}"
 
     for i in range(n_loc):
         for j in range(i + 1, n_loc):
-            weight = weights[i][j]
-            graph.add_edge(_node(i), _node(j), weight=weight, label=weight)
+            # Add nodes and edge to the graph
+            name_i, name_j = f"node{i}", f"node{j}"
+            graph.node(name=name_i, label=_node_label(i))
+            graph.node(name=name_j, label=_node_label(j))
+            graph.edge(name_i, name_j, label=str(weights[i][j]))
 
-    graph.draw(filename, prog=prog)
+    _render(graph, filename, engine="dot")
 
     print(f"The network graph has been saved to {filename}.")
 
@@ -332,7 +341,6 @@ def draw_route_graph(
     routing: RoutingModel,
     manager: RoutingIndexManager,
     assignment: Assignment,
-    prog="sfdp",
 ) -> None:
     """
     Draw a route graph based on the solution of the problem.
@@ -341,9 +349,9 @@ def draw_route_graph(
     weights = data["weights"]
     demands = data["demands"]
     time_windows = data["time_windows"]
-    graph = pgv.AGraph(directed=True)
+    graph = gv.Digraph(name="route")
 
-    def _node(index: int) -> str:
+    def _node_label(index: int) -> str:
         if index == 0:
             return f"{index}\nDepot"
         return f"{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}"
@@ -355,14 +363,26 @@ def draw_route_graph(
             next_index = assignment.Value(routing.NextVar(index))
             next_node_index = manager.IndexToNode(next_index)
             weight = weights[node_index][next_node_index]
-            graph.add_edge(
-                _node(node_index), _node(next_node_index), weight=weight, label=weight
-            )
+
+            # Add nodes and edge to the graph
+            name_cur, name_next = f"node{node_index}", f"node{next_node_index}"
+            graph.node(name=name_cur, label=_node_label(node_index))
+            graph.node(name=name_next, label=_node_label(next_node_index))
+            graph.edge(name_cur, name_next, label=str(weight))
+
             index = next_index
 
-    graph.draw(filename, prog=prog)
+    _render(graph, filename, engine="sfdp")
 
     print(f"The route graph has been saved to {filename}.")
+
+
+def _render(graph: gv.Digraph, filename: str, engine: LayoutEngine) -> None:
+    """Render the graph and write the image to a file."""
+
+    # Defaults to PNG if filename has no file extension
+    ext = Path(filename).suffix or ".png"
+    graph.render(cleanup=True, format=ext[1:], outfile=filename, engine=engine)
 
 
 if __name__ == "__main__":
