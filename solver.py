@@ -3,9 +3,9 @@ Solve the Capacitated Vehicle Routing Problem with Time Windows (CVRPTW).
 """
 
 import argparse
-from collections import abc
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, TypeAlias
+from typing import Literal
 
 import graphviz as gv
 import yaml
@@ -14,65 +14,46 @@ from ortools.constraint_solver.routing_enums_pb2 import (
     FirstSolutionStrategy,
     LocalSearchMetaheuristic,
 )
-
-TransitCallback: TypeAlias = abc.Callable[[int, int], int]
-UnaryTransitCallback: TypeAlias = abc.Callable[[int], int]
-
-# Ref. https://graphviz.org/docs/layouts/
-LayoutEngine: TypeAlias = Literal[
-    "dot", "neato", "fdp", "sfdp", "circo", "twopi", "osage"
-]
+from ortools.constraint_solver.routing_parameters_pb2 import RoutingSearchParameters
 
 
 def main() -> None:
-    """
-    Entry point of the program.
-    """
+    """Entry point of the program."""
 
     # Parse command line arguments
     args = _parse_args()
 
-    # Instantiate the data problem
-    data = _load_data_model(args.path)
+    # Load the problem
+    data = _load_problem(args.path)
 
     # Create the Routing Index Manager and Routing Model
-    manager = cp.RoutingIndexManager(
-        data["num_locations"], data["num_vehicles"], data["depot"]
-    )
+    manager = cp.RoutingIndexManager(data.num_locations, data.num_vehicles, data.depot)
     routing = cp.RoutingModel(manager)
 
     # Define weights of edges
-    weight_callback_index = routing.RegisterTransitCallback(
-        create_weight_callback(manager, data)
-    )
-    routing.SetArcCostEvaluatorOfAllVehicles(weight_callback_index)
+    _set_edge_weights(routing, manager, data)
 
     # Add capacity constraints
-    demand_callback = _create_demand_callback(manager, data)
-    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
-    _add_capacity_constraints(routing, manager, data, demand_callback_index)
+    _add_capacity_constraints(routing, manager, data)
 
     # Add time window constraints
-    time_callback_index = routing.RegisterTransitCallback(
-        _create_time_callback(manager, data)
-    )
-    _add_time_window_constraints(routing, manager, data, time_callback_index)
+    _add_time_window_constraints(routing, manager, data)
 
     # Set first solution heuristic (cheapest addition)
-    search_params = cp.DefaultRoutingSearchParameters()
+    search_params: RoutingSearchParameters = cp.DefaultRoutingSearchParameters()
     search_params.first_solution_strategy = FirstSolutionStrategy.PATH_CHEAPEST_ARC
     if args.gls:
         search_params.local_search_metaheuristic = (
             LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
         )
-        # NOTE: Since Guided Local Search could take a very long time, we set a
-        # reasonable time limit
+        # NOTE: Since Guided Local Search could take a very long time,
+        # we set a reasonable time limit
         search_params.time_limit.seconds = 30
     if args.verbose:
         search_params.log_search = True
 
     # Solve the problem
-    assignment = routing.SolveWithParameters(search_params)
+    assignment: cp.Assignment = routing.SolveWithParameters(search_params)
     if not assignment:
         print("No solution found.")
         return
@@ -88,18 +69,16 @@ def main() -> None:
 
 
 def _parse_args() -> argparse.Namespace:
-    """
-    Parse command line arguments.
-    """
+    """Parse command line arguments."""
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "path", help="JSON or YAML file that represents a vehicle routing problem"
+        "path", help="JSON or YAML file that represents a vehicle routing problem."
     )
     parser.add_argument(
         "--gls",
         help=(
-            "enable Guided Local Search (Note: This could take a long time, so it's"
+            "Enable Guided Local Search (Note: This could take a long time, so it's"
             " a good idea to use --gls with -v to see the progress of a search)"
         ),
         action="store_true",
@@ -108,226 +87,228 @@ def _parse_args() -> argparse.Namespace:
         "-n",
         "--export-network-graph",
         metavar="NETWORK_FILE",
-        help="file to save an image of the given network",
+        help=(
+            "File path to save the image of the network graph."
+            " File format is automatically determined by the file extension."
+            " See https://graphviz.org/docs/outputs/ for the supported file formats."
+        ),
     )
     parser.add_argument(
         "-r",
         "--export-route-graph",
         metavar="ROUTE_FILE",
-        help="file to save an image of the the routes of vehicles",
+        help=(
+            "File path to save the image of the graph of the vehicle routes."
+            " File format is automatically determined by the file extension."
+            " See https://graphviz.org/docs/outputs/ for the supported file formats."
+        ),
     )
     parser.add_argument(
-        "-v", "--verbose", help="enable verbose output", action="store_true"
+        "-v", "--verbose", help="Enable verbose output.", action="store_true"
     )
     return parser.parse_args()
 
 
-def _load_data_model(path: str) -> dict:
-    """
-    Load the data for the problem from path.
-    """
+@dataclass(frozen=True)
+class Problem:
+    weights: list[list[int]]
+    service_times: list[int]
+    demands: list[int]
+    time_windows: list[list[int]]
+    max_time: int
+    vehicle_capacities: list[int]
+    depot: int
+
+    @property
+    def num_locations(self) -> int:
+        return len(self.time_windows)
+
+    @property
+    def num_vehicles(self) -> int:
+        return len(self.vehicle_capacities)
+
+
+def _load_problem(path: str) -> Problem:
+    """Load the data for the problem from path."""
 
     with open(path, encoding="utf-8") as file:
         data = yaml.safe_load(file)
 
-    data["num_locations"] = len(data["time_windows"])
-    data["num_vehicles"] = len(data["vehicle_capacities"])
-
-    return data
+    return Problem(**data)
 
 
-def create_weight_callback(
-    manager: cp.RoutingIndexManager, data: dict
-) -> TransitCallback:
-    """
-    Create a callback to return the weight between points.
-    """
+def _set_edge_weights(
+    routing: cp.RoutingModel, manager: cp.RoutingIndexManager, data: Problem
+) -> None:
+    """Set weights of edges defined in the problem to the routing model."""
 
-    def weight_callback(from_index: int, to_index: int) -> int:
-        """
-        Return the weight between the two points.
-        """
+    def _weight_callback(from_index: int, to_index: int) -> int:
+        """Return the weight between the two nodes."""
 
-        from_node = manager.IndexToNode(from_index)
-        to_node = manager.IndexToNode(to_index)
-        return data["weights"][from_node][to_node]
+        from_node: int = manager.IndexToNode(from_index)
+        to_node: int = manager.IndexToNode(to_index)
+        return data.weights[from_node][to_node]
 
-    return weight_callback
-
-
-def _create_demand_callback(
-    manager: cp.RoutingIndexManager, data: dict
-) -> UnaryTransitCallback:
-    """
-    Create a callback to get demands at each location.
-    """
-
-    def demand_callback(from_index: int) -> int:
-        """
-        Return the demand.
-        """
-
-        from_node = manager.IndexToNode(from_index)
-        return data["demands"][from_node]
-
-    return demand_callback
+    weight_callback_index = routing.RegisterTransitCallback(_weight_callback)
+    routing.SetArcCostEvaluatorOfAllVehicles(weight_callback_index)
 
 
 def _add_capacity_constraints(
-    routing: cp.RoutingModel,
-    manager: cp.RoutingIndexManager,
-    data: dict,
-    demand_callback_index: int,
+    routing: cp.RoutingModel, manager: cp.RoutingIndexManager, data: Problem
 ) -> None:
-    """
-    Add capacity constraints.
-    """
+    """Add capacity constraints defined in the problem to the routing model."""
 
+    def _demand_callback(from_index: int) -> int:
+        """Return the demand at the node."""
+
+        from_node: int = manager.IndexToNode(from_index)
+        return data.demands[from_node]
+
+    demand_callback_index = routing.RegisterUnaryTransitCallback(_demand_callback)
     routing.AddDimensionWithVehicleCapacity(
         demand_callback_index,
-        slack_max=0,  # null capacity slack
-        vehicle_capacities=data["vehicle_capacities"],  # vehicle maximum capacities
-        fix_start_cumul_to_zero=True,  # start cumul to zero
+        slack_max=0,  # Null capacity slack
+        vehicle_capacities=data.vehicle_capacities,  # Vehicle maximum capacities
+        fix_start_cumul_to_zero=True,  # Start cumul to zero
         name="Capacity",
     )
 
 
-def _create_time_callback(
-    manager: cp.RoutingIndexManager, data: dict
-) -> TransitCallback:
-    """
-    Create a callback to get total times between locations.
-    """
+def _add_time_window_constraints(
+    routing: cp.RoutingModel, manager: cp.RoutingIndexManager, data: Problem
+) -> None:
+    """Add time window constraints defined in the problem to the routing model."""
 
-    def time_callback(from_index: int, to_index: int) -> int:
-        """
-        Return the total time between the two nodes.
-        """
+    def _time_callback(from_index: int, to_index: int) -> int:
+        """Return the total time between the two nodes."""
 
-        from_node = manager.IndexToNode(from_index)
-        to_node = manager.IndexToNode(to_index)
+        from_node: int = manager.IndexToNode(from_index)
+        to_node: int = manager.IndexToNode(to_index)
 
-        # Get the service time to the specified location
-        serv_time = data["service_times"][from_node]
-        # Get the travel times between two locations
-        trav_time = data["weights"][from_node][to_node]
+        # Get the service time to the specified node
+        serv_time = data.service_times[from_node]
+        # Get the travel times between two nodes
+        trav_time = data.weights[from_node][to_node]
 
         return serv_time + trav_time
 
-    return time_callback
-
-
-def _add_time_window_constraints(
-    routing: cp.RoutingModel,
-    manager: cp.RoutingIndexManager,
-    data: dict,
-    time_callback_index: int,
-) -> None:
-    """
-    Add time window constraints.
-    """
-
-    horizon = data["max_time"]
+    time_callback_index = routing.RegisterTransitCallback(_time_callback)
+    horizon = data.max_time
     routing.AddDimension(
         time_callback_index,
-        slack_max=horizon,  # allow waiting time
-        capacity=horizon,  # maximum time per vehicle
+        slack_max=horizon,  # Allow waiting time
+        capacity=horizon,  # Maximum time per vehicle
         # Don't force start cumul to zero. This doesn't have any effect in this example,
         # since the depot has a start window of (0, 0).
         fix_start_cumul_to_zero=False,
         name="Time",
     )
-    time_dimension = routing.GetDimensionOrDie("Time")
-    for loc_idx, (open_time, close_time) in enumerate(data["time_windows"]):
-        index = manager.NodeToIndex(loc_idx)
+    time_dimension: cp.RoutingDimension = routing.GetDimensionOrDie("Time")
+    for loc_idx, (open_time, close_time) in enumerate(data.time_windows):
+        index: int = manager.NodeToIndex(loc_idx)
         time_dimension.CumulVar(index).SetRange(open_time, close_time)
 
 
 def _print_solution(
-    data: dict,
+    data: Problem,
     routing: cp.RoutingModel,
     manager: cp.RoutingIndexManager,
     assignment: cp.Assignment,
 ) -> None:
-    """
-    Print the solution.
-    """
+    """Print the solution."""
 
-    capacity_dimension = routing.GetDimensionOrDie("Capacity")
-    time_dimension = routing.GetDimensionOrDie("Time")
+    capacity_dimension: cp.RoutingDimension = routing.GetDimensionOrDie("Capacity")
+    time_dimension: cp.RoutingDimension = routing.GetDimensionOrDie("Time")
     total_time = 0
 
-    for vehicle_id in range(data["num_vehicles"]):
-        index = routing.Start(vehicle_id)
-        node_props = []
+    for vehicle_id in range(data.num_vehicles):
+        index: int = routing.Start(vehicle_id)
+        nodes: list[Node] = []
 
         while not routing.IsEnd(index):
-            props = _node_properties(
+            node = _create_node(
                 manager, assignment, capacity_dimension, time_dimension, index
             )
-            node_props.append(props)
-            index = assignment.Value(routing.NextVar(index))
+            nodes.append(node)
 
-        props = _node_properties(
+            next_var: cp.IntVar = routing.NextVar(index)
+            index = assignment.Value(next_var)
+
+        # Add the last node in the route
+        node = _create_node(
             manager, assignment, capacity_dimension, time_dimension, index
         )
-        node_props.append(props)
-        route_time = assignment.Value(time_dimension.CumulVar(index))
+        nodes.append(node)
+
+        time_var: cp.IntVar = time_dimension.CumulVar(index)
+        route_time: int = assignment.Value(time_var)
         route = "\n  -> ".join(
-            ["[Node %2s: Load(%s) Time(%2s, %s)]" % prop for prop in node_props]
+            (
+                f"[Node {node.index:2d}: Load({node.load:2d})"
+                f" Time({node.min_time:2d}, {node.max_time:3d})]"
+            )
+            for node in nodes
         )
-        plan_output = (
-            f"Route for vehicle {vehicle_id}:\n  {route}\n"
-            f"Load of the route: {props[1]}\nTime of the route: {route_time} min\n"
+        print(
+            f"Route for vehicle {vehicle_id}:\n     {route}\n"
+            f"Load of the route: {node.load}\nTime of the route: {route_time} min\n"
         )
-        print(plan_output)
 
         total_time += route_time
 
     print(f"Total time of all routes: {total_time} min")
 
 
-def _node_properties(
+@dataclass(frozen=True)
+class Node:
+    index: int
+    load: int
+    min_time: int
+    max_time: int
+
+
+def _create_node(
     manager: cp.RoutingIndexManager,
     assignment: cp.Assignment,
     capacity_dimension: cp.RoutingDimension,
     time_dimension: cp.RoutingDimension,
     index: int,
-) -> tuple:
-    """
-    Get a node's properties corresponding to the index.
-    """
+) -> Node:
+    """Create a Node corresponding to the index."""
 
-    node_index = manager.IndexToNode(index)
-    load = assignment.Value(capacity_dimension.CumulVar(index))
-    time_var = time_dimension.CumulVar(index)
-    time_min, time_max = assignment.Min(time_var), assignment.Max(time_var)
-    return (node_index, load, time_min, time_max)
+    node_index: int = manager.IndexToNode(index)
+
+    cap_var: cp.IntVar = capacity_dimension.CumulVar(index)
+    load: int = assignment.Value(cap_var)
+
+    time_var: cp.IntVar = time_dimension.CumulVar(index)
+    min_time: int = assignment.Min(time_var)
+    max_time: int = assignment.Max(time_var)
+
+    return Node(node_index, load, min_time, max_time)
 
 
-def _draw_network_graph(filename: str, data: dict) -> None:
-    """
-    Draw a network graph of the problem.
-    """
-
-    weights = data["weights"]
-    demands = data["demands"]
-    time_windows = data["time_windows"]
-    n_loc = data["num_locations"]
-    graph = gv.Digraph(name="network")
+def _draw_network_graph(filename: str, data: Problem) -> None:
+    """Draw a network graph of the problem."""
 
     def _node_label(index: int) -> str:
         if index == 0:
-            return f"{index}\nDepot"
-        return f"{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}"
+            return f"Node {index}\nDepot"
+        return (
+            f"Node {index}\nDemand: {data.demands[index]}\n"
+            f"Window: {data.time_windows[index]}"
+        )
 
+    graph = gv.Digraph(name="network")
+
+    n_loc = data.num_locations
     for i in range(n_loc):
         for j in range(i + 1, n_loc):
             # Add nodes and edge to the graph
             name_i, name_j = f"node{i}", f"node{j}"
             graph.node(name=name_i, label=_node_label(i))
             graph.node(name=name_j, label=_node_label(j))
-            graph.edge(name_i, name_j, label=str(weights[i][j]))
+            graph.edge(name_i, name_j, label=str(data.weights[i][j]))
 
     _render(graph, filename, engine="dot")
 
@@ -336,32 +317,31 @@ def _draw_network_graph(filename: str, data: dict) -> None:
 
 def _draw_route_graph(
     filename: str,
-    data: dict,
+    data: Problem,
     routing: cp.RoutingModel,
     manager: cp.RoutingIndexManager,
     assignment: cp.Assignment,
 ) -> None:
-    """
-    Draw a route graph based on the solution of the problem.
-    """
-
-    weights = data["weights"]
-    demands = data["demands"]
-    time_windows = data["time_windows"]
-    graph = gv.Digraph(name="route")
+    """Draw a route graph based on the solution of the problem."""
 
     def _node_label(index: int) -> str:
         if index == 0:
-            return f"{index}\nDepot"
-        return f"{index}\nDemand: {demands[index]}\nRange: {time_windows[index]}"
+            return f"Node {index}\nDepot"
+        return (
+            f"Node {index}\nDemand: {data.demands[index]}\n"
+            f"Window: {data.time_windows[index]}"
+        )
 
-    for vehicle_id in range(data["num_vehicles"]):
-        index = routing.Start(vehicle_id)
+    graph = gv.Digraph(name="route")
+
+    for vehicle_id in range(data.num_vehicles):
+        index: int = routing.Start(vehicle_id)
         while not routing.IsEnd(index):
-            node_index = manager.IndexToNode(index)
-            next_index = assignment.Value(routing.NextVar(index))
-            next_node_index = manager.IndexToNode(next_index)
-            weight = weights[node_index][next_node_index]
+            node_index: int = manager.IndexToNode(index)
+            next_var: cp.IntVar = routing.NextVar(index)
+            next_index: int = assignment.Value(next_var)
+            next_node_index: int = manager.IndexToNode(next_index)
+            weight = data.weights[node_index][next_node_index]
 
             # Add nodes and edge to the graph
             name_cur, name_next = f"node{node_index}", f"node{next_node_index}"
@@ -376,7 +356,12 @@ def _draw_route_graph(
     print(f"The route graph has been saved to {filename}.")
 
 
-def _render(graph: gv.Digraph, filename: str, engine: LayoutEngine) -> None:
+def _render(
+    graph: gv.Digraph,
+    filename: str,
+    # Ref. https://graphviz.org/docs/layouts/
+    engine: Literal["dot", "neato", "fdp", "sfdp", "circo", "twopi", "osage"],
+) -> None:
     """Render the graph and write the image to a file."""
 
     # Defaults to PNG if filename has no file extension
