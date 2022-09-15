@@ -30,10 +30,10 @@ def main() -> None:
     """
 
     # Parse command line arguments
-    args = parse_args()
+    args = _parse_args()
 
     # Instantiate the data problem
-    data = load_data_model(args.path)
+    data = _load_data_model(args.path)
 
     # Create the Routing Index Manager and Routing Model
     manager = cp.RoutingIndexManager(
@@ -48,15 +48,15 @@ def main() -> None:
     routing.SetArcCostEvaluatorOfAllVehicles(weight_callback_index)
 
     # Add capacity constraints
-    demand_callback = create_demand_callback(manager, data)
+    demand_callback = _create_demand_callback(manager, data)
     demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
-    add_capacity_constraints(routing, manager, data, demand_callback_index)
+    _add_capacity_constraints(routing, manager, data, demand_callback_index)
 
     # Add time window constraints
     time_callback_index = routing.RegisterTransitCallback(
-        create_time_callback(manager, data)
+        _create_time_callback(manager, data)
     )
-    add_time_window_constraints(routing, manager, data, time_callback_index)
+    _add_time_window_constraints(routing, manager, data, time_callback_index)
 
     # Set first solution heuristic (cheapest addition)
     search_params = cp.DefaultRoutingSearchParameters()
@@ -78,16 +78,16 @@ def main() -> None:
         return
 
     # Print the solution
-    print_solution(data, routing, manager, assignment)
+    _print_solution(data, routing, manager, assignment)
 
     # Export network and route graphs
     if args.export_network_graph:
-        draw_network_graph(args.export_network_graph, data)
+        _draw_network_graph(args.export_network_graph, data)
     if args.export_route_graph:
-        draw_route_graph(args.export_route_graph, data, routing, manager, assignment)
+        _draw_route_graph(args.export_route_graph, data, routing, manager, assignment)
 
 
-def parse_args() -> argparse.Namespace:
+def _parse_args() -> argparse.Namespace:
     """
     Parse command line arguments.
     """
@@ -122,7 +122,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_data_model(path: str) -> dict:
+def _load_data_model(path: str) -> dict:
     """
     Load the data for the problem from path.
     """
@@ -155,7 +155,7 @@ def create_weight_callback(
     return weight_callback
 
 
-def create_demand_callback(
+def _create_demand_callback(
     manager: cp.RoutingIndexManager, data: dict
 ) -> UnaryTransitCallback:
     """
@@ -173,7 +173,7 @@ def create_demand_callback(
     return demand_callback
 
 
-def add_capacity_constraints(
+def _add_capacity_constraints(
     routing: cp.RoutingModel,
     manager: cp.RoutingIndexManager,
     data: dict,
@@ -192,7 +192,7 @@ def add_capacity_constraints(
     )
 
 
-def create_time_callback(
+def _create_time_callback(
     manager: cp.RoutingIndexManager, data: dict
 ) -> TransitCallback:
     """
@@ -217,7 +217,7 @@ def create_time_callback(
     return time_callback
 
 
-def add_time_window_constraints(
+def _add_time_window_constraints(
     routing: cp.RoutingModel,
     manager: cp.RoutingIndexManager,
     data: dict,
@@ -243,7 +243,7 @@ def add_time_window_constraints(
         time_dimension.CumulVar(index).SetRange(open_time, close_time)
 
 
-def print_solution(
+def _print_solution(
     data: dict,
     routing: cp.RoutingModel,
     manager: cp.RoutingIndexManager,
@@ -262,13 +262,13 @@ def print_solution(
         node_props = []
 
         while not routing.IsEnd(index):
-            props = node_properties(
+            props = _node_properties(
                 manager, assignment, capacity_dimension, time_dimension, index
             )
             node_props.append(props)
             index = assignment.Value(routing.NextVar(index))
 
-        props = node_properties(
+        props = _node_properties(
             manager, assignment, capacity_dimension, time_dimension, index
         )
         node_props.append(props)
@@ -287,7 +287,7 @@ def print_solution(
     print(f"Total time of all routes: {total_time} min")
 
 
-def node_properties(
+def _node_properties(
     manager: cp.RoutingIndexManager,
     assignment: cp.Assignment,
     capacity_dimension: cp.RoutingDimension,
@@ -305,7 +305,7 @@ def node_properties(
     return (node_index, load, time_min, time_max)
 
 
-def draw_network_graph(filename: str, data: dict) -> None:
+def _draw_network_graph(filename: str, data: dict) -> None:
     """
     Draw a network graph of the problem.
     """
@@ -334,7 +334,7 @@ def draw_network_graph(filename: str, data: dict) -> None:
     print(f"The network graph has been saved to {filename}.")
 
 
-def draw_route_graph(
+def _draw_route_graph(
     filename: str,
     data: dict,
     routing: cp.RoutingModel,
