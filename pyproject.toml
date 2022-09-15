@@ -26,3 +26,14 @@ build-backend = "poetry.core.masonry.api"
 # Ref. https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#isort
 [tool.isort]
 profile = "black"
+
+# Pyright configuration
+# Ref. https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+[tool.pyright]
+include = ["*"]
+typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+# Disable some diagnostic settings because strict type checking for external libraries
+# is too hard
+reportMissingTypeStubs = "none"
+reportUnknownMemberType = "none"
