@@ -1,31 +1,28 @@
 [tool.poetry]
 name = "vrp-solver"
-version = "0.1.0"
+version = "1.0.0"
 description = "Capacitated Vehicle Routing Problem with Time Windows (CVRPTW) solver written in Python."
-authors = ["Soshi Katsuta"]
+authors = ["Soshi Katsuta <soshi.katsuta@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
-ortools = "^9.0.9048"
-pygraphviz = "^1.7"
-PyYAML = "^5.4.1"
+python = "~3.10"
+ortools = "~9.4"
+pyyaml = "~6.0"
+graphviz = "~0.20"
 
 [tool.poetry.dev-dependencies]
-black = "^21.6b0"
-flake8 = "^3.9.2"
-isort = "^5.8.0"
+black = "~22.8"
+flake8 = "~5.0"
+isort = "~5.10"
+pyright = "~1.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-# Black compatible configurations for isort
-# Ref. https://black.readthedocs.io/en/stable/compatible_configs.html#isort
+# isort configuration compatible with Black
+# Ref. https://pycqa.github.io/isort/docs/configuration/black_compatibility.html
+# Ref. https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#isort
 [tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-line_length = 88
+profile = "black"
