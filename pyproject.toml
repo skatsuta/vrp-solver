@@ -6,7 +6,7 @@ authors = ["Soshi Katsuta <soshi.katsuta@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "~3.10"
+python = "^3.9"
 ortools = "~9.4"
 pyyaml = "~6.0"
 graphviz = "~0.20"
