@@ -23,7 +23,7 @@ In this case, this program would give the following solution, for example:
 
 ## Prerequisites
 
-Python 3.10 or later is required.
+Python 3.9 or later is required.
 
 
 ## Usage
