@@ -23,10 +23,10 @@ def main() -> None:
     # Parse command line arguments
     args = _parse_args()
 
-    # Load the problem
+    # Load a problem
     data = _load_problem(args.path)
 
-    # Create the Routing Index Manager and Routing Model
+    # Create a Routing Index Manager and Routing Model
     manager = cp.RoutingIndexManager(data.num_locations, data.num_vehicles, data.depot)
     routing = cp.RoutingModel(manager)
 
@@ -39,8 +39,9 @@ def main() -> None:
     # Add time window constraints
     _add_time_window_constraints(routing, manager, data)
 
-    # Set first solution heuristic (cheapest addition)
+    # Configure routing search parameters
     search_params: RoutingSearchParameters = cp.DefaultRoutingSearchParameters()
+    # Use cheapest addition as the first solution heuristic
     search_params.first_solution_strategy = FirstSolutionStrategy.PATH_CHEAPEST_ARC
     search_params.time_limit.seconds = args.time_limit
     if args.gls:
