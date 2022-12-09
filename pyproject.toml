@@ -7,13 +7,13 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-ortools = "~9.4"
+ortools = "~9.5"
 pyyaml = "~6.0"
 graphviz = "~0.20"
 
 [tool.poetry.dev-dependencies]
-black = "~22.8"
-flake8 = "~5.0"
+black = "~22.10"
+flake8 = "~6.0"
 isort = "~5.10"
 pyright = "~1.1"
 
