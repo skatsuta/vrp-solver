@@ -42,13 +42,11 @@ def main() -> None:
     # Set first solution heuristic (cheapest addition)
     search_params: RoutingSearchParameters = cp.DefaultRoutingSearchParameters()
     search_params.first_solution_strategy = FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    search_params.time_limit.seconds = args.time_limit
     if args.gls:
         search_params.local_search_metaheuristic = (
             LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
         )
-        # NOTE: Since Guided Local Search could take a very long time,
-        # we set a reasonable time limit
-        search_params.time_limit.seconds = 30
     if args.verbose:
         search_params.log_search = True
 
@@ -71,9 +69,19 @@ def main() -> None:
 def _parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        # Print default values in help message
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument(
         "path", help="JSON or YAML file that represents a vehicle routing problem."
+    )
+    parser.add_argument(
+        "-t",
+        "--time-limit",
+        help="Limit in seconds to the time spent in the search.",
+        type=int,
+        default=30,
     )
     parser.add_argument(
         "--gls",
