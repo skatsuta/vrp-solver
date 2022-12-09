@@ -87,8 +87,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--gls",
         help=(
-            "Enable Guided Local Search (Note: This could take a long time, so it's"
-            " a good idea to use --gls with -v to see the progress of a search)"
+            "Enable Guided Local Search (Note: This could take a long time,"
+            " so it's a good idea to use -t/--time-limit with --gls"
+            " to set a reasonable time limit in a search)"
         ),
         action="store_true",
     )
