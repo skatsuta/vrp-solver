@@ -149,7 +149,7 @@ def _set_edge_weights(
         to_node: int = manager.IndexToNode(to_index)
         return data.weights[from_node][to_node]
 
-    weight_callback_index = routing.RegisterTransitCallback(_weight_callback)
+    weight_callback_index: int = routing.RegisterTransitCallback(_weight_callback)
     routing.SetArcCostEvaluatorOfAllVehicles(weight_callback_index)
 
 
@@ -164,7 +164,7 @@ def _add_capacity_constraints(
         from_node: int = manager.IndexToNode(from_index)
         return data.demands[from_node]
 
-    demand_callback_index = routing.RegisterUnaryTransitCallback(_demand_callback)
+    demand_callback_index: int = routing.RegisterUnaryTransitCallback(_demand_callback)
     routing.AddDimensionWithVehicleCapacity(
         demand_callback_index,
         slack_max=0,  # Null capacity slack
@@ -192,7 +192,7 @@ def _add_time_window_constraints(
 
         return serv_time + trav_time
 
-    time_callback_index = routing.RegisterTransitCallback(_time_callback)
+    time_callback_index: int = routing.RegisterTransitCallback(_time_callback)
     horizon = data.max_time
     routing.AddDimension(
         time_callback_index,
